@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { RotateIcon, ZoomInIcon, ZoomOutIcon, ResetIcon } from './Icons';
 
@@ -9,7 +8,6 @@ interface ImageEditorProps {
   error: string | null;
 }
 
-const PASSPORT_ASPECT_RATIO = 3.5 / 4.5;
 const CANVAS_WIDTH = 420; // 3.5cm * 120
 const CANVAS_HEIGHT = 540; // 4.5cm * 120
 
@@ -22,6 +20,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [initialTransforms, setInitialTransforms] = useState<{ zoom: number; rotation: number; offset: { x: number; y: number; }; } | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -31,9 +30,10 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
     const img = imageRef.current;
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (img.width === 0) return; // Don't draw if image not loaded
+
     ctx.save();
     
-    // Center of canvas
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
     
@@ -49,17 +49,32 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
     const img = imageRef.current;
     img.crossOrigin = "anonymous";
     img.src = imageSrc;
-    img.onload = () => {
-        // Fit image inside canvas initially
-        const hRatio = CANVAS_WIDTH / img.width;
-        const vRatio = CANVAS_HEIGHT / img.height;
-        const initialZoom = Math.max(hRatio, vRatio);
-        setZoom(initialZoom);
-        setOffset({ x: 0, y: 0 });
-        setRotation(0);
-        draw();
+
+    const setInitialView = () => {
+      if (!img.complete || img.naturalWidth === 0) {
+        // Image not loaded yet, wait for onload
+        return;
+      }
+      
+      const hRatio = CANVAS_WIDTH / img.width;
+      const vRatio = CANVAS_HEIGHT / img.height;
+      const initialZoom = Math.min(hRatio, vRatio);
+      
+      const transforms = { zoom: initialZoom, offset: { x: 0, y: 0 }, rotation: 0 };
+      
+      setInitialTransforms(transforms);
+      setZoom(transforms.zoom);
+      setOffset(transforms.offset);
+      setRotation(transforms.rotation);
     };
-  }, [imageSrc, draw]);
+
+    img.onload = setInitialView;
+    // If image is already cached and loaded
+    if (img.complete && img.naturalWidth > 0) {
+      setInitialView();
+    }
+
+  }, [imageSrc]);
 
   useEffect(() => {
     draw();
@@ -89,13 +104,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
   };
   
   const resetTransforms = () => {
-      const img = imageRef.current;
-      const hRatio = CANVAS_WIDTH / img.width;
-      const vRatio = CANVAS_HEIGHT / img.height;
-      const initialZoom = Math.max(hRatio, vRatio);
-      setZoom(initialZoom);
-      setOffset({ x: 0, y: 0 });
-      setRotation(0);
+    if (initialTransforms) {
+        setZoom(initialTransforms.zoom);
+        setOffset(initialTransforms.offset);
+        setRotation(initialTransforms.rotation);
+    }
   };
 
   const handleGenerateClick = () => {
@@ -126,14 +139,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
           <div className="absolute top-[20%] left-0 right-0 h-[1px] bg-black/20"></div>
           <div className="absolute bottom-[13%] left-0 right-0 h-[1px] bg-black/20"></div>
           <div className="absolute left-[50%] top-[20%] bottom-[13%] w-[60%] border-l border-r border-dashed border-black/20 -translate-x-1/2"></div>
-          <div className="absolute top-[18%] left-1/2 -translate-x-1/2 text-xs bg-black/30 text-white px-1 rounded">정수리</div>
-          <div className="absolute bottom-[11%] left-1/2 -translate-x-1/2 text-xs bg-black/30 text-white px-1 rounded">턱</div>
         </div>
       </div>
 
       <div className="w-full max-w-sm p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
         <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">사진 조정</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">얼굴이 안내선 안에 위치하도록 사진을 조정하세요. (정수리-턱 3.2cm ~ 3.6cm)</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">얼굴이 안내선 안에 위치하도록 사진을 조정하세요.</p>
 
         {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert"><p>{error}</p></div>}
         
@@ -158,7 +169,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
             >
                 {isGenerating ? '생성 중...' : 'AI로 여권 사진 생성'}
             </button>
-            <button onClick={resetTransforms} className="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 flex items-center justify-center gap-2">
+            <button onClick={resetTransforms} className="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 flex items-center justify-center gap-2 disabled:bg-gray-100 disabled:cursor-not-allowed">
                 <ResetIcon className="w-5 h-5"/> 조정 초기화
             </button>
             <button onClick={onCancel} className="w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mt-2">

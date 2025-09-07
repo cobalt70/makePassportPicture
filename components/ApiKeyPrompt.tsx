@@ -46,7 +46,7 @@ export const ApiKeyPrompt: React.FC<ApiKeyPromptProps> = ({ onApiKeySubmit }) =>
         </button>
       </form>
       <p className="mt-4 text-xs text-gray-500">
-        API 키는 브라우저에만 저장되며, 저희 서버로 전송되지 않습니다.
+        API 키는 브라우저에 안전하게 저장되어 다음 방문 시에도 사용할 수 있습니다.
       </p>
     </div>
   );

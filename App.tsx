@@ -4,7 +4,6 @@ import { FileUploader } from './components/FileUploader';
 import { ImageEditor } from './components/ImageEditor';
 import { LoadingView } from './components/LoadingView';
 import { ResultView } from './components/ResultView';
-import { ApiKeyPrompt } from './components/ApiKeyPrompt';
 import { generatePassportPhoto } from './services/geminiService';
 import { AppState } from './types';
 
@@ -13,7 +12,6 @@ const App: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(() => sessionStorage.getItem('gemini_api_key'));
 
   const handleFileSelect = (file: File) => {
     const reader = new FileReader();
@@ -30,16 +28,11 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = async (editedImageBase64: string) => {
-    if (!apiKey) {
-      setError('API 키가 설정되지 않았습니다. 페이지를 새로고침하고 다시 시도하세요.');
-      setAppState(AppState.EDITING);
-      return;
-    }
-
     setAppState(AppState.PROCESSING);
     setError(null);
     try {
-      const result = await generatePassportPhoto(editedImageBase64, apiKey);
+      // API 키는 이제 서비스 레벨에서 환경 변수로부터 직접 읽어옵니다.
+      const result = await generatePassportPhoto(editedImageBase64);
       if (result) {
         setProcessedImage(`data:image/png;base64,${result}`);
         setAppState(AppState.RESULT);
@@ -52,9 +45,7 @@ const App: React.FC = () => {
       if (err instanceof Error) {
         errorMessage = err.message;
         if (err.message.includes('API key not valid')) {
-            errorMessage = '유효하지 않은 API 키입니다. 키를 확인하고 다시 시도하세요.';
-            sessionStorage.removeItem('gemini_api_key');
-            setApiKey(null);
+            errorMessage = '유효하지 않은 API 키입니다. 환경 변수를 확인해주세요.';
         }
       }
       setError(`사진 생성에 실패했습니다: ${errorMessage}`);
@@ -68,17 +59,9 @@ const App: React.FC = () => {
     setProcessedImage(null);
     setError(null);
   }, []);
-  
-  const handleApiKeySubmit = (key: string) => {
-    sessionStorage.setItem('gemini_api_key', key);
-    setApiKey(key);
-  };
 
   const renderContent = () => {
-    if (!apiKey) {
-      return <ApiKeyPrompt onApiKeySubmit={handleApiKeySubmit} />;
-    }
-
+    // API 키 입력 UI를 제거하고 바로 업로드 화면을 보여줍니다.
     switch (appState) {
       case AppState.UPLOADING:
         return <FileUploader onFileSelect={handleFileSelect} />;

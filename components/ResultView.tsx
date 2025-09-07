@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DownloadIcon, RestartIcon } from './Icons';
 
 interface ResultViewProps {
@@ -8,14 +8,42 @@ interface ResultViewProps {
 }
 
 export const ResultView: React.FC<ResultViewProps> = ({ originalImageSrc, processedImageSrc, onReset }) => {
+  const [format, setFormat] = useState<'png' | 'jpeg'>('png');
 
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = processedImageSrc;
-    link.download = 'korean_passport_photo.png';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const filename = `korean_passport_photo.${format === 'png' ? 'png' : 'jpg'}`;
+    
+    if (format === 'png') {
+      const link = document.createElement('a');
+      link.href = processedImageSrc;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else { // 'jpeg'
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Fill background with white for JPG format
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          const jpegUrl = canvas.toDataURL('image/jpeg', 0.95); // 95% quality
+          
+          const link = document.createElement('a');
+          link.href = jpegUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      };
+      img.src = processedImageSrc;
+    }
   };
 
   return (
@@ -38,6 +66,34 @@ export const ResultView: React.FC<ResultViewProps> = ({ originalImageSrc, proces
         </div>
       </div>
       
+      <div className="mb-8 flex flex-col items-center">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">다운로드 포맷</label>
+        <div className="inline-flex rounded-md shadow-sm" role="group">
+          <button
+            type="button"
+            onClick={() => setFormat('png')}
+            className={`px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-l-lg border border-gray-300 dark:border-gray-600 focus:z-10 focus:ring-2 focus:ring-blue-500 ${
+              format === 'png'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
+            }`}
+          >
+            PNG (기본값)
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormat('jpeg')}
+            className={`px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-r-md border border-gray-300 dark:border-gray-600 focus:z-10 focus:ring-2 focus:ring-blue-500 ${
+              format === 'jpeg'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
+            }`}
+          >
+            JPG
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <button
           onClick={handleDownload}
