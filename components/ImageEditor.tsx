@@ -3,7 +3,7 @@ import { RotateIcon, ZoomInIcon, ZoomOutIcon, ResetIcon } from './Icons';
 
 interface ImageEditorProps {
   imageSrc: string;
-  onGenerate: (editedImageBase64: string) => void;
+  onGenerate: (editedImageBase64: string, additionalPrompt: string) => void;
   onCancel: () => void;
   error: string | null;
 }
@@ -20,6 +20,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [additionalPrompt, setAdditionalPrompt] = useState('');
   const [initialTransforms, setInitialTransforms] = useState<{ zoom: number; rotation: number; offset: { x: number; y: number; }; } | null>(null);
 
   const draw = useCallback(() => {
@@ -58,7 +59,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
       
       const hRatio = CANVAS_WIDTH / img.width;
       const vRatio = CANVAS_HEIGHT / img.height;
-      const initialZoom = Math.min(hRatio, vRatio);
+      const initialZoom = Math.max(hRatio, vRatio);
       
       const transforms = { zoom: initialZoom, offset: { x: 0, y: 0 }, rotation: 0 };
       
@@ -116,7 +117,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
     const canvas = canvasRef.current;
     if (canvas) {
       const base64Image = canvas.toDataURL('image/png', 1.0);
-      onGenerate(base64Image);
+      onGenerate(base64Image, additionalPrompt);
     }
   };
 
@@ -151,13 +152,33 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onGenerate, 
         <div className="space-y-6">
           <div className="flex items-center gap-4">
              <ZoomOutIcon className="w-6 h-6 text-gray-500"/>
-             <input type="range" min="0.1" max="3" step="0.01" value={zoom} onChange={e => setZoom(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
+             <input type="range" min="0.1" max="5" step="0.01" value={zoom} onChange={e => setZoom(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
              <ZoomInIcon className="w-6 h-6 text-gray-500"/>
           </div>
           <div className="flex items-center gap-4">
              <RotateIcon className="w-6 h-6 text-gray-500"/>
              <input type="range" min="-45" max="45" step="1" value={rotation} onChange={e => setRotation(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
              <span className="text-sm font-mono w-10 text-right">{rotation}°</span>
+          </div>
+        </div>
+        
+        <div className="mt-6">
+          <label htmlFor="additional-prompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            추가 요청사항 (선택)
+          </label>
+          <div className="mt-1 relative">
+            <textarea
+              id="additional-prompt"
+              rows={3}
+              maxLength={150}
+              value={additionalPrompt}
+              onChange={(e) => setAdditionalPrompt(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 resize-none"
+              placeholder="예: 안경을 제거해주세요."
+            />
+            <p className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {additionalPrompt.length} / 150
+            </p>
           </div>
         </div>
 

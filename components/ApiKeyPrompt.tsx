@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyIcon, LogoIcon } from './Icons';
+import { LogoIcon } from './Icons';
 
 interface ApiKeyPromptProps {
   onApiKeySubmit: (apiKey: string) => void;
@@ -24,15 +24,12 @@ export const ApiKeyPrompt: React.FC<ApiKeyPromptProps> = ({ onApiKeySubmit }) =>
       </p>
       <form onSubmit={handleSubmit}>
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <KeyIcon className="h-5 w-5 text-gray-400" />
-          </div>
           <input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="API 키를 여기에 붙여넣으세요"
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             aria-label="Google AI API Key"
           />

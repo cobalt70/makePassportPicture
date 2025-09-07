@@ -6,14 +6,36 @@ import { LoadingView } from './components/LoadingView';
 import { ResultView } from './components/ResultView';
 import { generatePassportPhoto } from './services/geminiService';
 import { AppState } from './types';
+import heic2any from 'heic2any';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.UPLOADING);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
+    let fileToProcess = file;
+
+    const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+
+    if (isHeic) {
+      setIsConverting(true);
+      setError(null);
+      try {
+        const convertedBlob = await heic2any({ blob: file, toType: "image/png" });
+        const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+        fileToProcess = new File([finalBlob], file.name.replace(/\.[^/.]+$/, ".png"), { type: "image/png" });
+      } catch (err) {
+        console.error("HEIC conversion error:", err);
+        setError('HEIC 파일 변환에 실패했습니다. 다른 파일을 시도해 주세요.');
+        setIsConverting(false);
+        return;
+      }
+      setIsConverting(false);
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       setOriginalImage(e.target?.result as string);
@@ -24,15 +46,15 @@ const App: React.FC = () => {
         setError('사진을 읽는 중 오류가 발생했습니다. 다른 파일을 시도해 주세요.');
         setAppState(AppState.UPLOADING);
     }
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToProcess);
   };
 
-  const handleGenerate = async (editedImageBase64: string) => {
+  const handleGenerate = async (editedImageBase64: string, additionalPrompt: string) => {
     setAppState(AppState.PROCESSING);
     setError(null);
     try {
       // API 키는 이제 서비스 레벨에서 환경 변수로부터 직접 읽어옵니다.
-      const result = await generatePassportPhoto(editedImageBase64);
+      const result = await generatePassportPhoto(editedImageBase64, additionalPrompt);
       if (result) {
         setProcessedImage(`data:image/png;base64,${result}`);
         setAppState(AppState.RESULT);
@@ -58,13 +80,14 @@ const App: React.FC = () => {
     setOriginalImage(null);
     setProcessedImage(null);
     setError(null);
+    setIsConverting(false);
   }, []);
 
   const renderContent = () => {
     // API 키 입력 UI를 제거하고 바로 업로드 화면을 보여줍니다.
     switch (appState) {
       case AppState.UPLOADING:
-        return <FileUploader onFileSelect={handleFileSelect} />;
+        return <FileUploader onFileSelect={handleFileSelect} isConverting={isConverting} />;
       case AppState.EDITING:
         if (originalImage) {
           return <ImageEditor imageSrc={originalImage} onGenerate={handleGenerate} onCancel={handleReset} error={error} />;
@@ -82,7 +105,7 @@ const App: React.FC = () => {
         handleReset();
         return null;
       default:
-        return <FileUploader onFileSelect={handleFileSelect} />;
+        return <FileUploader onFileSelect={handleFileSelect} isConverting={isConverting} />;
     }
   };
 
