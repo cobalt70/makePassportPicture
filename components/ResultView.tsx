@@ -1,17 +1,17 @@
-
 import React from 'react';
 import { DownloadIcon, RestartIcon } from './Icons';
 
 interface ResultViewProps {
-  imageSrc: string;
+  originalImageSrc: string;
+  processedImageSrc: string;
   onReset: () => void;
 }
 
-export const ResultView: React.FC<ResultViewProps> = ({ imageSrc, onReset }) => {
+export const ResultView: React.FC<ResultViewProps> = ({ originalImageSrc, processedImageSrc, onReset }) => {
 
   const handleDownload = () => {
     const link = document.createElement('a');
-    link.href = imageSrc;
+    link.href = processedImageSrc;
     link.download = 'korean_passport_photo.png';
     document.body.appendChild(link);
     link.click();
@@ -19,12 +19,25 @@ export const ResultView: React.FC<ResultViewProps> = ({ imageSrc, onReset }) => 
   };
 
   return (
-    <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-lg mx-auto">
+    <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">여권 사진 완성!</h2>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">생성된 여권 사진입니다. 아래 버튼을 눌러 저장하세요.</p>
-      <div className="w-[175px] h-[225px] mx-auto rounded-lg shadow-md overflow-hidden mb-8 border-4 border-gray-200 dark:border-gray-700">
-        <img src={imageSrc} alt="Generated Passport Photo" className="w-full h-full object-cover" />
+      <p className="text-gray-600 dark:text-gray-400 mb-8">AI가 변환한 사진을 원본과 비교해 보세요. 만족스러우면 다운로드하세요.</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-3">Before</h3>
+          <div className="aspect-[3.5/4.5] w-full max-w-[350px] mx-auto rounded-lg shadow-md overflow-hidden bg-gray-200 dark:bg-gray-700">
+             <img src={originalImageSrc} alt="Original user photo" className="w-full h-full object-contain" />
+          </div>
+        </div>
+        <div>
+          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-3">After</h3>
+          <div className="aspect-[3.5/4.5] w-full max-w-[350px] mx-auto rounded-lg shadow-md overflow-hidden border-4 border-blue-500">
+             <img src={processedImageSrc} alt="Generated Passport Photo" className="w-full h-full object-cover" />
+          </div>
+        </div>
       </div>
+      
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <button
           onClick={handleDownload}
